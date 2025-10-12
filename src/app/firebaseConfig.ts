@@ -2,9 +2,46 @@
 // This prevents accidental production deploys with mock layer.
 const useRealFirebase = process.env.NEXT_PUBLIC_USE_FIREBASE === '1';
 
-let auth: any;
-let db: any;
+// Always export named bindings so the bundler/TS can statically see them
+export let auth: any = {
+  currentUser: null,
+  signOut: () => Promise.resolve(),
+  onAuthStateChanged: (callback: (user: any) => void) => {
+    callback(null);
+    return () => {};
+  },
+  app: null,
+  name: 'mock-auth',
+  config: {},
+  setPersistence: () => Promise.resolve(),
+  useDeviceLanguage: () => {},
+  updateCurrentUser: () => Promise.resolve(),
+  authStateReady: () => Promise.resolve(),
+  beforeAuthStateChanged: () => () => {},
+  tenantId: null,
+  languageCode: null,
+  settings: {},
+  emulatorConfig: null,
+} as any;
 
+export let db: any = {
+  collection: () => ({
+    doc: () => ({
+      set: () => Promise.resolve(),
+      get: () => Promise.resolve({ exists: false, data: () => null }),
+      update: () => Promise.resolve(),
+      delete: () => Promise.resolve(),
+    }),
+    add: () => Promise.resolve({ id: 'mock-id' }),
+    where: () => ({
+      get: () => Promise.resolve({ docs: [] }),
+    }),
+  }),
+  app: null,
+  settings: {},
+} as any;
+
+// If real Firebase is enabled and credentials are present, override the mocks
 if (useRealFirebase) {
   try {
     // Lazy require only when needed to keep bundle smaller if mock
@@ -30,46 +67,6 @@ if (useRealFirebase) {
   }
 }
 
-if (!auth || !db) {
-  // Mock Firebase objects for development / fallback
-  auth = {
-    currentUser: null,
-    signOut: () => Promise.resolve(),
-    onAuthStateChanged: (callback: (user: any) => void) => {
-      callback(null);
-      return () => {};
-    },
-    app: null,
-    name: 'mock-auth',
-    config: {},
-    setPersistence: () => Promise.resolve(),
-    useDeviceLanguage: () => {},
-    updateCurrentUser: () => Promise.resolve(),
-    authStateReady: () => Promise.resolve(),
-    beforeAuthStateChanged: () => () => {},
-    tenantId: null,
-    languageCode: null,
-    settings: {},
-    emulatorConfig: null,
-  } as any;
-
-  db = {
-    collection: () => ({
-      doc: () => ({
-        set: () => Promise.resolve(),
-        get: () => Promise.resolve({ exists: false, data: () => null }),
-        update: () => Promise.resolve(),
-        delete: () => Promise.resolve(),
-      }),
-      add: () => Promise.resolve({ id: 'mock-id' }),
-      where: () => ({
-        get: () => Promise.resolve({ docs: [] }),
-      }),
-    }),
-    app: null,
-    settings: {},
-  } as any;
-}
-
-export { auth, db };
+// Also export a tiny contract to introspect the mode in use
+export const isRealFirebase = () => useRealFirebase && auth?.name !== 'mock-auth';
 
